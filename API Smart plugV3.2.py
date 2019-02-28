@@ -172,9 +172,9 @@ class StartPage(tk.Frame):
         l2 = ttk.Label(self, text="Username", font=NORM_FONT)
         l3 = ttk.Label(self, text="Password", font=NORM_FONT)
         e1 = ttk.Entry(self)
-        e1.insert(0, "joao.rribas@gmail.com")
+        e1.insert(0, "email")
         e2 = ttk.Entry(self, show="*")
-        e2.insert(0, "192837465jr")
+        e2.insert(0, "password")
         c1 = ttk.Checkbutton(self, text="Hide password", onvalue=True, offvalue=False,
                              command=lambda: toggle_password(c1, e2))
 
