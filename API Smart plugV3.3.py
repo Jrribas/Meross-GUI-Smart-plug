@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
 import matplotlib.animation as animation
-import matplotlib.pyplot as plt
+from matplotlib import style
 import matplotlib.dates as mdates
 from meross_iot.api import MerossHttpClient
 import datetime as dt
@@ -21,7 +22,7 @@ matplotlib.use("TkAgg")
 LARGE_FONT = ("Verdana", 12)
 NORM_FONT = ("Verdana", 10)
 SMALL_FONT = ("Verdana", 8)
-
+style.use("ggplot")
 
 ################################################
 
@@ -33,20 +34,13 @@ voltage = [0]
 device1 = None
 c = 0
 
-plt.style.use('ggplot')
-fig, ax = plt.subplots(3, 1, sharex="all")
+f = Figure(figsize=(10.66666, 5.4166666), dpi=96)
+ax = f.add_subplot(3, 1, 1)
+ax1 = f.add_subplot(3, 1, 2, sharex=ax)
+ax2 = f.add_subplot(3, 1, 3, sharex=ax)
 
 
 ################################################
-
-
-def toggle_password(c1, e2):
-
-    if c1.var.get():
-        e2['show'] = "*"
-    else:
-        e2['show'] = ""
-
 
 def popupmsg(msg):
 
@@ -87,34 +81,36 @@ def animate(i):
         currentA.append(electricity["electricity"]["current"]/10000)
         date.append(dt.datetime.now())
 
-    plt.cla()
+    ax.clear()
+    ax1.clear()
+    ax2.clear()
 
-    ax[0].plot(date, power, 'r-o')
-    ax[1].plot(date, voltage, 'b-o')
+    ax.plot(date, power, 'r-o')
+    ax1.plot(date, voltage, 'b-o')
     if electricity["electricity"]["current"] < 9999:
-        ax[2].plot(date, currentmA, 'g-o')
+        ax2.plot(date, currentmA, 'g-o')
     else:
-        ax[2].plot(date, currentA, 'g-o')
+        ax2.plot(date, currentA, 'g-o')
 
-    ax[0].set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
-    ax[0].set_ylabel("Power", fontweight='extra bold', fontsize='x-large')
-    ax[1].set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
-    ax[1].set_ylabel("Voltage", fontweight='extra bold', fontsize='x-large')
-    ax[2].set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
-    ax[2].set_ylabel("Current", fontweight='extra bold', fontsize='x-large')
+    ax.set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
+    ax.set_ylabel("Power", fontweight='extra bold', fontsize='x-large')
+    ax1.set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
+    ax1.set_ylabel("Voltage", fontweight='extra bold', fontsize='x-large')
+    ax2.set_xlabel("Time", fontweight='extra bold', fontsize='x-large')
+    ax2.set_ylabel("Current", fontweight='extra bold', fontsize='x-large')
 
-    locator = mdates.AutoDateLocator()
-    formatter = mdates.AutoDateFormatter(locator)
+    locator = mdates.AutoDateLocator(minticks=4)
+    formatter = mdates.DateFormatter('%H:%M:%S')
 
-    ax[0].xaxis.set_major_locator(locator)
-    ax[0].xaxis.set_major_formatter(formatter)
-    ax[1].xaxis.set_major_locator(locator)
-    ax[1].xaxis.set_major_formatter(formatter)
-    ax[2].xaxis.set_major_locator(locator)
-    ax[2].xaxis.set_major_formatter(formatter)
+    ax.xaxis.set_major_locator(locator)
+    ax.xaxis.set_major_formatter(formatter)
+    ax1.xaxis.set_major_locator(locator)
+    ax1.xaxis.set_major_formatter(formatter)
+    ax2.xaxis.set_major_locator(locator)
+    ax2.xaxis.set_major_formatter(formatter)
 
-    fig.autofmt_xdate()
-    fig.tight_layout()
+    f.autofmt_xdate()
+    f.tight_layout()
 
 ################################################
 
@@ -122,13 +118,7 @@ def animate(i):
 class CustomToolbar(NavigationToolbar2Tk):
     def __init__(self, canvas_, parent_):
         self.toolitems = (
-            ('Home', 'Reset original view', 'home', 'home'),
-            (None, None, None, None),
-            ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
             ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
-            (None, None, None, None),
-            ('Subplots', 'Configure subplots', 'subplots', 'configure_subplots'),
-            ('Save', 'Save the figure', 'filesave', 'save_figure'),
             )
         NavigationToolbar2Tk.__init__(self, canvas_, parent_)
 
@@ -171,24 +161,24 @@ class StartPage(tk.Frame):
         l1 = ttk.Label(self, text="Authentication Page", font=("Verdana", 10, "bold"))
         l2 = ttk.Label(self, text="Username", font=NORM_FONT)
         l3 = ttk.Label(self, text="Password", font=NORM_FONT)
-        e1 = ttk.Entry(self)
-        e1.insert(0, "email")
-        e2 = ttk.Entry(self, show="*")
-        e2.insert(0, "password")
-        c1 = ttk.Checkbutton(self, text="Hide password", onvalue=True, offvalue=False,
-                             command=lambda: toggle_password(c1, e2))
+        self.e1 = ttk.Entry(self)
+        self.e1.insert(0, "email")
+        self.e2 = ttk.Entry(self, show="*")
+        self.e2.insert(0, "password")
+        self.c1 = ttk.Checkbutton(self, text="Hide password", onvalue=True, offvalue=False,
+                             command=lambda: self.toggle_password())
 
-        c1.var = tk.BooleanVar(value=True)
-        c1['variable'] = c1.var
+        self.c1.var = tk.BooleanVar(value=True)
+        self.c1['variable'] = self.c1.var
 
-        b1 = ttk.Button(self, text="Login", command=lambda: self.login(e1, e2))
+        b1 = ttk.Button(self, text="Login", command=lambda: self.login())
 
         l1.grid(row=1, column=1, columnspan=2, padx=5, pady=5)
         l2.grid(row=3, column=1, padx=2, pady=2)
         l3.grid(row=4, column=1, padx=2, pady=2)
-        c1.grid(row=4, column=3, padx=2, pady=2)
-        e1.grid(row=3, column=2, padx=2, pady=2)
-        e2.grid(row=4, column=2, padx=2, pady=2)
+        self.c1.grid(row=4, column=3, padx=2, pady=2)
+        self.e1.grid(row=3, column=2, padx=2, pady=2)
+        self.e2.grid(row=4, column=2, padx=2, pady=2)
         b1.grid(row=5, column=1, columnspan=2, padx=5, pady=5)
 
         self.grid_rowconfigure(0, weight=1)
@@ -196,12 +186,12 @@ class StartPage(tk.Frame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(4, weight=1)
 
-    def login(self, e1, e2):
+    def login(self):
 
         global device1
 
-        user = e1.get()
-        passw = e2.get()
+        user = self.e1.get()
+        passw = self.e2.get()
 
         httphandler = MerossHttpClient(email=user, password=passw)
         devices = httphandler.list_supported_devices()
@@ -210,6 +200,13 @@ class StartPage(tk.Frame):
             device1 = device
 
         self.master.switch_frame(GraphPage)
+
+    def toggle_password(self):
+
+        if self.c1.get():
+            self.e2['show'] = "*"
+        else:
+            self.e2['show'] = ""
 
 
 class GraphPage(tk.Frame):
@@ -220,7 +217,7 @@ class GraphPage(tk.Frame):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        canvas = FigureCanvasTkAgg(fig, self)
+        canvas = FigureCanvasTkAgg(f, self)
         canvas.get_tk_widget().grid(row=0, column=0, columnspan=10, rowspan=5, sticky=N+S+E+W)
         canvas.draw()
 
@@ -228,11 +225,10 @@ class GraphPage(tk.Frame):
         toolbarframe.grid(row=6, column=0, columnspan=10, sticky=W)
         toolbar = CustomToolbar(canvas, toolbarframe)
 
-        toolbar.update()
-
-        ani = animation.FuncAnimation(fig, animate, interval=10000)
+        ani = animation.FuncAnimation(f, animate, interval=10000)
 
         canvas.draw()
+        canvas.flush_events()
 
 
 if __name__ == "__main__":
@@ -240,3 +236,4 @@ if __name__ == "__main__":
     app = SampleApp()
     app.geometry("1024x512")
     app.mainloop()
+
